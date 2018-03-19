@@ -1,0 +1,75 @@
+// This function can send data in form of string over the UDP
+// Currently the PORT is 4546 and destination is localhosst.
+// Example:
+//      udpsned('Hello')
+// This will send the data 'Hello' over the UDP from PORT to destination IP address.
+
+#include "mex.h"
+#include <winsock2.h>
+#include <windows.h>
+#include <stdlib.h>
+#include <string.h>
+#include <conio.h>
+#include "simstruc.h"
+#include "mex.h" 
+#include "matrix.h"
+
+// Max length of buffer
+#define BUFLEN 2048
+
+void mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
+{
+    struct sockaddr_in si_other;
+    int s, slen=sizeof(si_other);
+    WSADATA wsa;
+    int buflen, i;
+    char *buf;
+    int status;
+    
+    if (nrhs != 1) {
+        mexErrMsgIdAndTxt( "MATLAB:mxmalloc:invalidNumInputs",
+                "One input argument required.");
+    }
+    if (nlhs > 1) {
+        mexErrMsgIdAndTxt( "MATLAB:MXMALLOC:maxlhs",
+                "Too many output arguments.");
+    }
+    
+    /* Check for proper input type */
+    if (!mxIsChar(prhs[0]) || (mxGetM(prhs[0]) != 1 ) )  {
+        mexErrMsgIdAndTxt( "MATLAB:mxmalloc:invalidInput",
+                "Input argument must be a string.");
+    }
+    
+    /* Get number of characters in the input string.  Allocate enough
+     * memory to hold the converted string. */
+    
+    buflen = mxGetN(prhs[0]) + 1;
+    buf = mxMalloc(buflen);
+    
+    /* Copy the string data into buf. */
+    status = mxGetString(prhs[0], buf, (mwSize)buflen);
+    mexPrintf("The input string is:  %s\n", buf);
+    
+    //Initialise winsock
+    WSAStartup(MAKEWORD(2,2),&wsa);    
+    
+    //create socket
+    s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    
+    //setup address structure
+    memset((char *) &si_other, 0, sizeof(si_other));
+    si_other.sin_family = AF_INET;
+    // Port on which you want to communicate. Currently it 4564
+    si_other.sin_port = htons(4546);
+    // Destination IP address. Currently it localhost
+    si_other.sin_addr.s_addr = inet_addr("127.0.0.1");
+    buflen = (1024*sizeof(mxChar))+1;
+    sendto(s, buf, buflen, 0 , (struct sockaddr *) &si_other, slen);
+    /* When finished using the string, deallocate it. */
+    mxFree(buf);
+    closesocket(s);
+    WSACleanup();
+}
+
+// EOF
