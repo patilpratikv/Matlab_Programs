@@ -1,0 +1,59 @@
+// This file contains the receiver function.
+// Its written in cmex, hence can be run on MATLAB or can be used as simple C file as well.
+// The function will infinietly listen o  the PORT untill and unless it receive any message 
+// on the PORT from the mentione IP address.
+// Example.
+//      message = udpreceive
+// message will have the string data received from the IP at specified PORT
+
+#include <stdio.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <stdlib.h>
+#include <string.h>
+#include <conio.h>
+#include "simstruc.h"
+#include "mex.h"
+#include "matrix.h"
+
+// Max length of buffer
+#define BUFLEN 2048 
+
+void mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
+{
+    int reuse = 1; //used to adjust # of while loops
+    const mxArray *myarray; //used to help extract your matlab variable's value
+    SOCKET s;
+    struct sockaddr_in server, si_other;
+    int slen , SelectTiming;
+    WSADATA wsa;
+    char *signal;
+    int   buflen;
+    
+    slen = sizeof(si_other) ;
+    signal = malloc( sizeof(char) * BUFLEN);
+    //Initialise winsock
+    WSAStartup(MAKEWORD(2, 2), &wsa);
+    //Create a socket
+    s = socket(AF_INET , SOCK_DGRAM , 0 );
+    
+    //Prepare the sockaddr_in structure
+    server.sin_family = AF_INET;
+    // IP address you want to communicate with. Currently its localhost
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    // Check the port number you want to communicate. You can chage it as well
+    server.sin_port = htons(4546);
+    
+    //Bind
+    bind(s , (struct sockaddr *)&server , sizeof(server));
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
+    
+    fflush(stdout);
+    memset(signal, '\0', BUFLEN);
+    recvfrom(s, signal, BUFLEN, 0, (struct sockaddr *) &si_other, &slen);
+    mexPrintf("The received string is:  %s\n", signal);
+    closesocket(s);
+    WSACleanup();
+}
+
+// EOF
